@@ -1,0 +1,32 @@
+- name: apt-get update
+  become: true
+  command: chroot {{ vyos_install_root }} apt-get update
+
+- name: Install cloud-init
+  become: true
+  command: chroot {{ vyos_install_root }} apt-get -t {{ vyos_release }} install -y --force-yes cloud-init cloud-utils ifupdown
+
+- name: apt-get clean
+  become: true
+  command: chroot {{ vyos_install_root }} apt-get clean
+
+- name: delete apt lists from cache
+  become: true
+  command: chroot {{ vyos_install_root }} rm -rf /var/lib/apt/lists/
+
+- name: Create cfg.d dir
+  become: true
+  file:
+    path: "{{ vyos_install_root }}/etc/cloud/cloud.cfg.d/"
+    state: directory
+    mode: 0755
+
+- name: Put datasource_list.cfg
+  become: true
+  template:
+    src: 90_dpkg.cfg.j2
+    dest: "{{ vyos_install_root }}/etc/cloud/cloud.cfg.d/90_dpkg.cfg"
+
+- name: run dpkg-reconfigure cloud-init
+  become: true
+  command: chroot {{ vyos_install_root }} dpkg-reconfigure -f noninteractive cloud-init
