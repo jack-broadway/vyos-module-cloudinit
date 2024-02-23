@@ -1,3 +1,10 @@
+- name: Replace vyos repos for sagitta with current
+  become: true
+  template:
+    src: "files/current.list"
+    dest: "{{ vyos_install_root }}/etc/apt/sources.list.d/current.list"
+  when: vyos_release == 'sagitta'
+
 - name: apt-get update
   become: true
   command: chroot {{ vyos_install_root }} apt-get update
@@ -5,6 +12,12 @@
 - name: Install cloud-init
   become: true
   command: chroot {{ vyos_install_root }} apt-get -t {{ vyos_release }} install -y --force-yes cloud-init cloud-utils ifupdown
+  when: vyos_release != 'sagitta'
+
+- name: Install cloud-init
+  become: true
+  command: chroot {{ vyos_install_root }} apt-get -t current install -y --force-yes cloud-init cloud-utils ifupdown
+  when: vyos_release == 'sagitta'
 
 - name: apt-get clean
   become: true
@@ -13,6 +26,13 @@
 - name: delete apt lists from cache
   become: true
   command: chroot {{ vyos_install_root }} rm -rf /var/lib/apt/lists/
+
+- name: Remove current list
+  become: true
+  file:
+    path: "{{ vyos_install_root }}/etc/apt/sources.list.d/current.list"
+    state: absent
+  when: vyos_release == 'sagitta'
 
 - name: Create cfg.d dir
   become: true
@@ -30,3 +50,10 @@
 - name: run dpkg-reconfigure cloud-init
   become: true
   command: chroot {{ vyos_install_root }} dpkg-reconfigure -f noninteractive cloud-init
+
+- name: Add source-directory to the /etc/network/interfaces
+  become: true
+  lineinfile:
+    path: "{{ vyos_install_root }}/etc/network/interfaces"
+    line: "source-directory /etc/network/interfaces.d"
+    create: yes
